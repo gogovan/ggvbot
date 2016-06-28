@@ -64,6 +64,18 @@ This bot demonstrates many of the core features of Botkit:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 require('dotenv').config();
 
+if (!String.prototype.format) {
+  String.prototype.format = function() {
+    var args = arguments;
+    return this.replace(/{(\d+)}/g, function(match, number) {
+      return typeof args[number] != 'undefined'
+        ? args[number]
+        : match
+      ;
+    });
+  };
+}
+
 var ggvapi = require( './lib/ggv/api.js');
 
 if (!process.env.token) {
@@ -184,6 +196,7 @@ controller.hears(['ggv', 'gogovan'], 'direct_message,direct_mention,mention', fu
       convo.ask('Any contact for reciver ? ')
 
       */
+      getLocation(bot, message, convo);
       convo.ask('Correct?', [
         {
             pattern: 'yes',
@@ -193,12 +206,13 @@ controller.hears(['ggv', 'gogovan'], 'direct_message,direct_mention,mention', fu
                 console.log(ggvapi);
                 var cb = function(res){
                   console.log(">>>>>>>>>>>>>>>>>>");
-                  console.log(res)
+                  convo.say( res.breakdown.fee.title + " : "+ res.breakdown.fee.value );
+                  console.log( res );
                   console.log("<<<<<<<<<<<<<<<<<<");
+                  convo.next();
                 }
                 ggvapi.get('orders/price.json', null, cb);
                 console.log("******************");
-                convo.next();
             }
         },
         {
@@ -242,7 +256,54 @@ function formatUptime(uptime) {
     uptime = uptime + ' ' + unit;
     return uptime;
 }
+function getLocation( bot, message, convo ){
+  controller.storage.users.get(message.user, function(err, user) {
+    if (user && user.locations ) {
 
+    } else {
+
+      convo.say('The starting point address / landscape name');
+      convo.ask('Where should I pick up the package? ', function(message, convo) {
+        var cb = function(res){
+          if ( res.status == 'OK') {
+            console.log("GOOGLE!!!!!!!!!");
+              var getReply = function( res ) {
+                for (var key in res.results) {
+                  var text = "{0}: {1}\n".format(res.results[key].name, res.results[key].formatted_address );
+                  console.log( text );
+                  this.convo.ask('is this place ? '+ text, [
+                    {
+                        pattern: 'yes',
+                        callback: function(response, convo) {
+                            convo.say( 'CHOSE '+ text);
+                            convo.next();
+                        }
+                    },
+                    {
+                        pattern: 'no',
+                        callback: function(response, convo) {
+                            convo.stop();
+                        }
+                    },
+                    {
+                        default: true,
+                        callback: function(response, convo) {
+                            convo.next();
+                        }
+                    }
+                  ]);
+                }
+              }
+              getReply(res);
+            console.log("<<<<<<<<<<<<<<<<<<!!!!!!!!!!!!!!!!!");
+          }
+          // convo.next();
+        }.bind(this);
+        ggvapi.searchLocation(message.text, cb);
+      });
+    }
+  });
+}
 function askName(bot,message, replyMessage ){
   controller.storage.users.get(message.user, function(err, user) {
       if (user && user.name) {
@@ -283,7 +344,7 @@ function askName(bot,message, replyMessage ){
 
                   convo.on('end', function(convo) {
                       if (convo.status == 'completed') {
-                          bot.reply(message, 'OK! I will update my dossier...');
+                          bot.reply(message, 'OK! I will keep it in mind');
 
                           controller.storage.users.get(message.user, function(err, user) {
                               if (!user) {
