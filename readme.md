@@ -1,3 +1,11 @@
+## GGV env
+https://www.npmjs.com/package/dotenv
+1. echo 'token={SLACK_TOKEN}' > .env
+2. echo 'GGV_TOKEN={GGV_API_TOKEN}' >> .env
+3. nodemon slack_bot.js
+
+-----------------------------
+
 # [Botkit](http://howdy.ai/botkit) - Building Blocks for Building Bots
 
 [![npm](https://img.shields.io/npm/v/botkit.svg)](https://www.npmjs.com/package/botkit)
@@ -41,7 +49,6 @@ Use the `--production` flag to skip the installation of devDependencies from Bot
 npm install --production
 ```
 
-
 ## Getting Started
 
 After you've installed Botkit, the first thing you'll need to do is register your bot with a messaging platform, and get a few configuration options set. This will allow your bot to connect, send and receive messages.
@@ -54,6 +61,9 @@ lives in Slack, [follow these instructions for attaining a Bot Token](readme-sla
 If you intend to create a bot that lives in Facebook Messenger, [follow these instructions for configuring your Facebook page](readme-facebook.md#getting-started).
 
 If you intent to create a bot that lives inside a Twilio IP Messaging client, [follow these instructions for configuring your app](readme-twilioipm.md#getting-started).
+
+
+
 
 ## Core Concepts
 

@@ -62,6 +62,7 @@ This bot demonstrates many of the core features of Botkit:
     -> http://howdy.ai/botkit
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+require('dotenv').config();
 
 var ggvapi = require( './lib/ggv/api.js');
 
@@ -195,7 +196,7 @@ controller.hears(['ggv', 'gogovan'], 'direct_message,direct_mention,mention', fu
                   console.log(res)
                   console.log("<<<<<<<<<<<<<<<<<<");
                 }
-                ggvapi.get('orders/price', null, cb);
+                ggvapi.get('orders/price.json', null, cb);
                 console.log("******************");
                 convo.next();
             }
