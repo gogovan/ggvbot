@@ -1,11 +1,3 @@
-## GGV env
-https://www.npmjs.com/package/dotenv
-1. echo 'token={SLACK_TOKEN}' > .env
-2. echo 'GGV_TOKEN={GGV_API_TOKEN}' >> .env
-3. nodemon slack_bot.js
-
------------------------------
-
 # [Botkit](http://howdy.ai/botkit) - Building Blocks for Building Bots
 
 [![npm](https://img.shields.io/npm/v/botkit.svg)](https://www.npmjs.com/package/botkit)
@@ -27,8 +19,7 @@ Botkit features a comprehensive set of tools to deal with popular messaging plat
 
 Botkit is available via NPM.
 
-```
-bash
+```bash
 npm install --save botkit
 ```
 
@@ -49,6 +40,7 @@ Use the `--production` flag to skip the installation of devDependencies from Bot
 npm install --production
 ```
 
+
 ## Getting Started
 
 After you've installed Botkit, the first thing you'll need to do is register your bot with a messaging platform, and get a few configuration options set. This will allow your bot to connect, send and receive messages.
@@ -61,9 +53,6 @@ lives in Slack, [follow these instructions for attaining a Bot Token](readme-sla
 If you intend to create a bot that lives in Facebook Messenger, [follow these instructions for configuring your Facebook page](readme-facebook.md#getting-started).
 
 If you intent to create a bot that lives inside a Twilio IP Messaging client, [follow these instructions for configuring your app](readme-twilioipm.md#getting-started).
-
-
-
 
 ## Core Concepts
 
@@ -562,7 +551,7 @@ One way to have multi-stage conversations is with multiple functions
 which call each other. Each function asks just one question. Example:
 
 ```javascript
-controller.hears(['pizzatime'], 'message_recieved', function(bot,message) {
+controller.hears(['pizzatime'], 'message_received', function(bot,message) {
     askFlavor = function(response, convo) {
       convo.ask('What flavor of pizza do you want?', function(response, convo) {
         convo.say('Awesome.');
@@ -876,4 +865,3 @@ Here is an example of [using an Express web server alongside BotKit](https://git
 
 # Chat with us at dev4slack.slack.com
 You can get an invite here: http://dev4slack.xoxco.com/.
-# ggvbot

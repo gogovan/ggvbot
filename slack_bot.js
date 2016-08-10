@@ -62,21 +62,7 @@ This bot demonstrates many of the core features of Botkit:
     -> http://howdy.ai/botkit
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-require('dotenv').config();
 
-if (!String.prototype.format) {
-  String.prototype.format = function() {
-    var args = arguments;
-    return this.replace(/{(\d+)}/g, function(match, number) {
-      return typeof args[number] != 'undefined'
-        ? args[number]
-        : match
-      ;
-    });
-  };
-}
-
-var ggvapi = require( './lib/ggv/api.js');
 
 if (!process.env.token) {
     console.log('Error: Specify token in environment');
@@ -133,7 +119,71 @@ controller.hears(['call me (.*)', 'my name is (.*)'], 'direct_message,direct_men
 });
 
 controller.hears(['what is my name', 'who am i'], 'direct_message,direct_mention,mention', function(bot, message) {
-  askName(bot,message,  'Your name is' + message.user.name );
+
+    controller.storage.users.get(message.user, function(err, user) {
+        if (user && user.name) {
+            bot.reply(message, 'Your name is ' + user.name);
+        } else {
+            bot.startConversation(message, function(err, convo) {
+                if (!err) {
+                    convo.say('I do not know your name yet!');
+                    convo.ask('What should I call you?', function(response, convo) {
+                        convo.ask('You want me to call you `' + response.text + '`?', [
+                            {
+                                pattern: 'yes',
+                                callback: function(response, convo) {
+                                    // since no further messages are queued after this,
+                                    // the conversation will end naturally with status == 'completed'
+                                    convo.next();
+                                }
+                            },
+                            {
+                                pattern: 'no',
+                                callback: function(response, convo) {
+                                    // stop the conversation. this will cause it to end with status == 'stopped'
+                                    convo.stop();
+                                }
+                            },
+                            {
+                                default: true,
+                                callback: function(response, convo) {
+                                    convo.repeat();
+                                    convo.next();
+                                }
+                            }
+                        ]);
+
+                        convo.next();
+
+                    }, {'key': 'nickname'}); // store the results in a field called nickname
+
+                    convo.on('end', function(convo) {
+                        if (convo.status == 'completed') {
+                            bot.reply(message, 'OK! I will update my dossier...');
+
+                            controller.storage.users.get(message.user, function(err, user) {
+                                if (!user) {
+                                    user = {
+                                        id: message.user,
+                                    };
+                                }
+                                user.name = convo.extractResponse('nickname');
+                                controller.storage.users.save(user, function(err, id) {
+                                    bot.reply(message, 'Got it. I will call you ' + user.name + ' from now on.');
+                                });
+                            });
+
+
+
+                        } else {
+                            // this happens if the conversation ended prematurely for some reason
+                            bot.reply(message, 'OK, nevermind!');
+                        }
+                    });
+                }
+            });
+        }
+    });
 });
 
 
@@ -176,69 +226,7 @@ controller.hears(['uptime', 'identify yourself', 'who are you', 'what is your na
              '>. I have been running for ' + uptime + ' on ' + hostname + '.');
 
     });
-controller.hears(['ggv', 'gogovan'], 'direct_message,direct_mention,mention', function(bot, message) {
-  bot.startConversation(message, function(err, convo) {
-      /***************
-      convo.ask('May I ask who is the sender ?', function(response, convo) {
 
-      }, {'key': 'senderContact'});
-      convo.ask('What\'s the sender contact?', function(response, convo) {
-
-      }, {'key': 'senderNumber'});
-
-      convo.ask('Where can I pick it up (starting point)?', function(response, convo) {
-
-      }, {'key': 'senderLocationStart'});
-
-      convo.ask('Where do I send to (destination)?', function(response, convo) {
-
-      }, {'key': 'senderLocationStart'});
-      convo.ask('Any contact for reciver ? ')
-
-      */
-      getLocation(bot, message, convo);
-      convo.ask('Correct?', [
-        {
-            pattern: 'yes',
-            callback: function(response, convo) {
-                convo.say('YES created!');
-                console.log("******************");
-                console.log(ggvapi);
-                var cb = function(res){
-                  console.log(">>>>>>>>>>>>>>>>>>");
-                  convo.say( res.breakdown.fee.title + " : "+ res.breakdown.fee.value );
-                  console.log( res );
-                  console.log("<<<<<<<<<<<<<<<<<<");
-                  convo.next();
-                }
-                ggvapi.get('orders/price.json', null, cb);
-                console.log("******************");
-            }
-        },
-        {
-            pattern: 'no',
-            callback: function(response, convo) {
-                convo.say('*Edit!*');
-                convo.stop();
-            }
-        },
-        {
-            default: true,
-            callback: function(response, convo) {
-                convo.repeat();
-                convo.next();
-            }
-        }
-      ]);
-      convo.on('end', function(convo) {
-          if (convo.status == 'completed') {
-              bot.reply(message, 'OK! I will update my dossier...');
-          } else {
-              bot.reply(message, 'OK, nevermind!');
-          }
-      });
-  });
-});
 function formatUptime(uptime) {
     var unit = 'second';
     if (uptime > 60) {
@@ -255,116 +243,4 @@ function formatUptime(uptime) {
 
     uptime = uptime + ' ' + unit;
     return uptime;
-}
-function getLocation( bot, message, convo ){
-  controller.storage.users.get(message.user, function(err, user) {
-    if (user && user.locations ) {
-
-    } else {
-
-      convo.say('The starting point address / landscape name');
-      convo.ask('Where should I pick up the package? ', function(message, convo) {
-        var cb = function(res){
-          if ( res.status == 'OK') {
-            console.log("GOOGLE!!!!!!!!!");
-              var getReply = function( res ) {
-                for (var key in res.results) {
-                  var text = "{0}: {1}\n".format(res.results[key].name, res.results[key].formatted_address );
-                  console.log( text );
-                  this.convo.ask('is this place ? '+ text, [
-                    {
-                        pattern: 'yes',
-                        callback: function(response, convo) {
-                            convo.say( 'CHOSE '+ text);
-                            convo.next();
-                        }
-                    },
-                    {
-                        pattern: 'no',
-                        callback: function(response, convo) {
-                            convo.stop();
-                        }
-                    },
-                    {
-                        default: true,
-                        callback: function(response, convo) {
-                            convo.next();
-                        }
-                    }
-                  ]);
-                }
-              }
-              getReply(res);
-            console.log("<<<<<<<<<<<<<<<<<<!!!!!!!!!!!!!!!!!");
-          }
-          // convo.next();
-        }.bind(this);
-        ggvapi.searchLocation(message.text, cb);
-      });
-    }
-  });
-}
-function askName(bot,message, replyMessage ){
-  controller.storage.users.get(message.user, function(err, user) {
-      if (user && user.name) {
-          bot.reply(message, replyMessage);
-      } else {
-          bot.startConversation(message, function(err, convo) {
-              if (!err) {
-                  convo.say('I do not know your name yet!');
-                  convo.ask('What should I call you?', function(response, convo) {
-                      convo.ask('You want me to call you `' + response.text + '`?', [
-                          {
-                              pattern: 'yes',
-                              callback: function(response, convo) {
-                                  // since no further messages are queued after this,
-                                  // the conversation will end naturally with status == 'completed'
-                                  convo.next();
-                              }
-                          },
-                          {
-                              pattern: 'no',
-                              callback: function(response, convo) {
-                                  // stop the conversation. this will cause it to end with status == 'stopped'
-                                  convo.stop();
-                              }
-                          },
-                          {
-                              default: true,
-                              callback: function(response, convo) {
-                                  convo.repeat();
-                                  convo.next();
-                              }
-                          }
-                      ]);
-
-                      convo.next();
-
-                  }, {'key': 'nickname'}); // store the results in a field called nickname
-
-                  convo.on('end', function(convo) {
-                      if (convo.status == 'completed') {
-                          bot.reply(message, 'OK! I will keep it in mind');
-
-                          controller.storage.users.get(message.user, function(err, user) {
-                              if (!user) {
-                                  user = {
-                                      id: message.user,
-                                  };
-                              }
-                              user.name = convo.extractResponse('nickname');
-                              controller.storage.users.save(user, function(err, id) {
-                                  bot.reply(message, 'Got it. I will call you ' + user.name + ' from now on.');
-                              });
-                          });
-
-                      } else {
-                          // this happens if the conversation ended prematurely for some reason
-                          bot.reply(message, 'OK, nevermind!');
-                      }
-                  });
-              }
-          });
-      }
-  });
 }
